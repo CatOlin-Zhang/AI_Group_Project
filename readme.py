@@ -1,0 +1,1 @@
+#2025/11/1 https://www.python.org/downloads/windows/ py3.8.10
