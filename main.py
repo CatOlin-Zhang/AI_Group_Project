@@ -137,6 +137,7 @@ class IMDBDataset(Dataset):
 train_texts, val_texts, train_labels, val_labels = train_test_split(
     train_df['clean_text'].tolist(),
     train_df['label'].tolist(),
+    #TODO 数据集切分(默认0.1)
     test_size=0.1,
     random_state=42,
     stratify=train_df['label'].tolist()  # 保持情感分布一致
@@ -176,6 +177,7 @@ optimizer = AdamW(
 )
 
 # 学习率调度器（线性预热后线性衰减）
+#TODO 全局训练轮次(默认3轮)
 epochs = 3  # 预训练模型收敛快，3-5轮足够
 total_steps = len(train_loader) * epochs
 scheduler = get_linear_schedule_with_warmup(
