@@ -3,7 +3,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer, AdamW, get_linear_schedule_with_warmup
-
+from torch.optim import AdamW
 from config import *
 from data_loader import load_and_preprocess_data, simple_preprocess
 from dataset import IMDBDataset
