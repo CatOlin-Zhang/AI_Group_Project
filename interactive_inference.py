@@ -7,7 +7,7 @@ from transformers import BertTokenizer, BertForSequenceClassification
 # 配置（需与训练时一致）
 # ----------------------------
 MODEL_NAME = 'bert-base-uncased'
-MODEL_PATH = 'best_bert_model.bin'
+MODEL_PATH = 'best_bert_model(2).bin'
 MAX_LENGTH = 512
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
