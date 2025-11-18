@@ -1,0 +1,103 @@
+D:\ANACONDA\envs\AI\python.exe C:\Users\阿根达斯\PycharmProjects\AI_Group_Project\merge_and_evaluate.py
+正在加载 IMDb 官方测试集 (使用比例: 5.0%)...
+最终测试样本数: 1250
+
+==================================================
+初始化训练子集（用于过拟合分析）...
+加载 IMDb 训练集子集 (比例: 5.0%) 用于过拟合分析...
+使用 1250 条训练样本
+
+正在评估独立模型...
+
+
+--- 模型 1: best_bert_model(1).bin ---
+Some weights of BertForSequenceClassification were not initialized from the model checkpoint at bert-base-uncased and are newly initialized: ['classifier.bias', 'classifier.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+评估: 100%|██████████| 79/79 [01:01<00:00,  1.29it/s]
+准确率: 0.7352 | F1 (macro): 0.7322 | F1 (weighted): 0.7316
+混淆矩阵:
+[[393 244]
+ [ 87 526]]
+
+正在评估 模型 1 的过拟合风险...
+评估: 100%|██████████| 79/79 [01:11<00:00,  1.10it/s]
+评估: 100%|██████████| 79/79 [00:58<00:00,  1.34it/s]
+模型 1 训练子集: 准确率=0.7352, F1(macro)=0.7323
+模型 1 测试子集: 准确率=0.7352, F1(macro)=0.7322
+准确率差距 (Train - Test): 0.0000
+F1 差距 (Train - Test): 0.0001
+模型 1 泛化良好，无显著过拟合
+
+--- 模型 2: best_bert_model(2).bin ---
+Some weights of BertForSequenceClassification were not initialized from the model checkpoint at bert-base-uncased and are newly initialized: ['classifier.bias', 'classifier.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+评估: 100%|██████████| 79/79 [01:01<00:00,  1.28it/s]
+评估:   0%|          | 0/79 [00:00<?, ?it/s]准确率: 0.6848 | F1 (macro): 0.6596 | F1 (weighted): 0.6614
+混淆矩阵:
+[[598  39]
+ [355 258]]
+
+正在评估 模型 2 的过拟合风险...
+评估: 100%|██████████| 79/79 [00:53<00:00,  1.47it/s]
+评估: 100%|██████████| 79/79 [01:13<00:00,  1.08it/s]
+模型 2 训练子集: 准确率=0.6528, F1(macro)=0.6210
+模型 2 测试子集: 准确率=0.6848, F1(macro)=0.6596
+准确率差距 (Train - Test): -0.0320
+F1 差距 (Train - Test): -0.0386
+模型 2 泛化良好，无显著过拟合
+
+--- 模型 3: best_bert_model(3).bin ---
+Some weights of BertForSequenceClassification were not initialized from the model checkpoint at bert-base-uncased and are newly initialized: ['classifier.bias', 'classifier.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+评估: 100%|██████████| 79/79 [01:00<00:00,  1.32it/s]
+评估:   0%|          | 0/79 [00:00<?, ?it/s]准确率: 0.9448 | F1 (macro): 0.9448 | F1 (weighted): 0.9448
+混淆矩阵:
+[[598  39]
+ [ 30 583]]
+
+正在评估 模型 3 的过拟合风险...
+评估: 100%|██████████| 79/79 [00:58<00:00,  1.34it/s]
+评估: 100%|██████████| 79/79 [00:56<00:00,  1.41it/s]
+模型 3 训练子集: 准确率=0.9856, F1(macro)=0.9856
+模型 3 测试子集: 准确率=0.9448, F1(macro)=0.9448
+准确率差距 (Train - Test): 0.0408
+F1 差距 (Train - Test): 0.0408
+提示：模型 3 存在轻微过拟合
+跳过 best_bert_model(4).bin：文件不存在
+跳过 best_bert_model(5).bin：文件不存在
+跳过 best_bert_model(6).bin：文件不存在
+跳过 best_bert_model(7).bin：文件不存在
+排除低性能模型 best_bert_model(2).bin (F1=0.6596 < 0.7)
+
+执行加权 FedAvg（按 F1(macro) 分配权重，阈值=0.7)...
+各模型权重分配:
+  模型 1 (best_bert_model(1).bin): F1(macro)=0.7322, 权重=0.4366
+  模型 2 (best_bert_model(3).bin): F1(macro)=0.9448, 权重=0.5634
+加权合并完成！已保存至: fedavg_merged_bert_model.bin
+
+正在评估合并后的模型...
+Some weights of BertForSequenceClassification were not initialized from the model checkpoint at bert-base-uncased and are newly initialized: ['classifier.bias', 'classifier.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+评估: 100%|██████████| 79/79 [01:12<00:00,  1.09it/s]
+
+合并模型最终结果:
+确率: 0.9328 | F1 (macro): 0.9328 | F1 (weighted): 0.9328
+混淆矩阵:
+[[595  42]
+ [ 42 571]]
+
+==================================================
+
+正在评估 合并模型 的过拟合风险...
+评估: 100%|██████████| 79/79 [00:53<00:00,  1.47it/s]
+评估: 100%|██████████| 79/79 [00:56<00:00,  1.40it/s]
+合并模型 训练子集: 准确率=0.9704, F1(macro)=0.9704
+合并模型 测试子集: 准确率=0.9328, F1(macro)=0.9328
+准确率差距 (Train - Test): 0.0376
+F1 差距 (Train - Test): 0.0376
+提示：合并模型 存在轻微过拟合
+
+最佳单模型: 准确率=0.9448, F1(macro)=0.9448
+合并模型:   准确率=0.9328, F1(macro)=0.9328
+
+进程已结束，退出代码为 0

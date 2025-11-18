@@ -25,7 +25,7 @@ NUM_LABELS = 2
 MODEL_NAME = 'bert-base-uncased'
 BATCH_SIZE = 16
 MAX_LEN = 512
-TEST_RATIO = 0.05
+TEST_RATIO = 0.05 #测试集大小
 RANDOM_SEED = 42
 
 MODEL_FILES = [f"best_bert_model({i}).bin" for i in range(1, 8)]
@@ -226,7 +226,7 @@ def main():
     valid_model_paths = []
     single_model_overfit_results = []  # 存储每个单模型的过拟合指标
 
-    print("\n正在评估 7 个独立模型...\n")
+    print("\n正在评估独立模型...\n")
     for i, model_path in enumerate(MODEL_FILES, 1):
         if not os.path.exists(model_path):
             print(f"跳过 {model_path}：文件不存在")
