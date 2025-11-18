@@ -93,6 +93,12 @@ def load_and_preprocess_data():
     """
     # Load the IMDB dataset from Hugging Face Hub (contains 'train' and 'test' splits)
     dataset = load_dataset("imdb")
+
+    split = dataset["train"].train_test_split(test_size=0.1, seed=42)
+
+    train_dataset = split["train"]
+    val_dataset = split["test"]
+
     # Convert training split to pandas DataFrame for easier manipulation
     train_df = pd.DataFrame(dataset['train'])
     # Convert test split to pandas DataFrame
