@@ -11,47 +11,50 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import nltk
 
-# 静默下载 NLTK 资源
+# Download NLTK resources
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
 
 from model import get_model, evaluate
 
-# ======================
-# 配置
-# ======================
+# Model Hyperparameter Settings
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NUM_LABELS = 2
 MODEL_NAME = 'bert-base-uncased'
 BATCH_SIZE = 16
 MAX_LEN = 512
-TEST_RATIO = 0.05 #测试集大小
+TEST_RATIO = 0.05 # Test set size
 RANDOM_SEED = 42
 
 MODEL_FILES = [f"best_bert_model({i}).bin" for i in range(1, 8)]
 OUTPUT_MERGED_PATH = "fedavg_merged_bert_model.bin"
 RESULT_LOG = "merge_evaluation_results.txt"
 
-# 新增：F1 阈值（低于此值的模型将被排除）
+# F1 score threshold (models below this value will be excluded)
+# Since the minimum accuracy of a binary classification model is 50%, the evaluation threshold should be at least 0.5
+# Too low an aggregation model means low-iteration models are synchronized with high-iteration updates,
+# which can jeopardize model convergence, so it is adjusted to 0.7 to filter out some poorer models.
 MIN_F1_THRESHOLD = 0.70
 
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
 
 
-# ======================
-#改进版 FedAvg：支持任意 score（如 F1）
-# ======================
+
+# Weighted Fed_avg algorithm 'Communication-Efficient Learning of Deep Networks from Decentralized Data'
+# Since the exact amount of data used for training is not available,
+# the vote-based scheme cannot be implemented and is replaced with an F1 score-based scheme
+# Bins with higher F1 scores (above the threshold) will be assigned higher weights
 def fed_avg_weighted(model_paths, scores, device="cpu"):
     """
-    基于任意评分（如 F1）加权的 FedAvg
+    FedAvg based on F1 weighting
     """
     if len(model_paths) != len(scores):
-        raise ValueError("model_paths 和 scores 长度必须一致")
+        raise ValueError("The lengths of model_paths and scores must be consistent.")
 
     valid_pairs = [(p, s) for p, s in zip(model_paths, scores) if os.path.exists(p)]
     if not valid_pairs:
-        raise FileNotFoundError("没有有效的模型文件")
+        raise FileNotFoundError("No valid model file")
 
     model_paths, scores = zip(*valid_pairs)
     scores = np.array(scores)
@@ -61,9 +64,9 @@ def fed_avg_weighted(model_paths, scores, device="cpu"):
     else:
         weights = scores / scores.sum()
 
-    print("各模型权重分配:")
+    print("Model weight allocation:")
     for i, (path, score, w) in enumerate(zip(model_paths, scores, weights), 1):
-        print(f"  模型 {i} ({os.path.basename(path)}): F1(macro)={score:.4f}, 权重={w:.4f}")
+        print(f"  Model {i} ({os.path.basename(path)}): F1(macro)={score:.4f}, Weight={w:.4f}")
 
     state_dicts = []
     for path in model_paths:
@@ -113,13 +116,13 @@ class IMDBTestDataset(Dataset):
 
 
 def create_imdb_test_loader(batch_size=16, max_len=512, test_ratio=1.0, seed=42):
-    print(f"正在加载 IMDb 官方测试集 (使用比例: {test_ratio * 100:.1f}%)...")
+    print(f"Loading IMDb test set (Proportion used: {test_ratio * 100:.1f}%)...")
     dataset = load_dataset("imdb")
     test_df = pd.DataFrame(dataset['test'])
     if test_ratio < 1.0:
         test_df = test_df.sample(frac=test_ratio, random_state=seed).reset_index(drop=True)
     test_df['clean_text'] = test_df['text'].apply(clean_text)
-    print(f"最终测试样本数: {len(test_df)}")
+    print(f"Final number of test samples: {len(test_df)}")
 
     tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
     test_dataset = IMDBTestDataset(
@@ -133,16 +136,16 @@ def create_imdb_test_loader(batch_size=16, max_len=512, test_ratio=1.0, seed=42)
 
 def create_imdb_train_subset_loader(batch_size=16, max_len=512, subset_ratio=0.05, seed=42):
     """
-    创建 IMDb 训练集的子集 DataLoader（用于近似评估训练性能）
+    Create a subset DataLoader of the IMDb training set (for approximate evaluation of training performance)
     """
-    print(f"加载 IMDb 训练集子集 (比例: {subset_ratio * 100:.1f}%) 用于过拟合分析...")
+    print(f"Load IMDb training dataset subset (Proportion used: {subset_ratio * 100:.1f}%) Used for overfitting analysis...")
     dataset = load_dataset("imdb")
     train_df = pd.DataFrame(dataset['train'])
 
-    # 随机采样（与测试集同规模更公平）
+    # Random sampling (fairer when the same size as the test set)
     train_df = train_df.sample(frac=subset_ratio, random_state=seed).reset_index(drop=True)
     train_df['clean_text'] = train_df['text'].apply(clean_text)
-    print(f"使用 {len(train_df)} 条训练样本")
+    print(f"Use {len(train_df)} training sample")
 
     tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
     train_dataset = IMDBTestDataset(
@@ -154,41 +157,44 @@ def create_imdb_train_subset_loader(batch_size=16, max_len=512, subset_ratio=0.0
     return DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 
-def assess_overfitting(model, train_loader, test_loader, device, model_name="模型"):
+def assess_overfitting(model, train_loader, test_loader, device, model_name="Model"):
     """
-    评估模型过拟合情况
+    Assessing Model Overfitting
 
     Returns:
-        dict: {'train_acc', 'test_acc', 'train_f1', 'test_f1', 'acc_gap', 'f1_gap'}
+    dict: {'train_acc', 'test_acc', 'train_f1', 'test_f1', 'acc_gap', 'f1_gap'}
+
+    Since model overfitting is defined as performing well on the training set (facing data it has already learned)
+    but poorly on the test set (data it has not seen),
+    the quantification metric for the degree of overfitting is defined as the difference in accuracy between the training set and the test set.
     """
-    print(f"\n正在评估 {model_name} 的过拟合风险...")
+    print(f"\nAssessing the overfitting risk of  {model_name} ...")
     model.eval()
 
-    # 训练子集性能
+    # Training subset performance
     _, train_acc, train_preds, train_labels = evaluate(model, train_loader, device)
     train_f1 = f1_score(train_labels, train_preds, average='macro')
 
-    # 测试子集性能
+    # Test subset performance
     _, test_acc, test_preds, test_labels = evaluate(model, test_loader, device)
     test_f1 = f1_score(test_labels, test_preds, average='macro')
 
     acc_gap = train_acc - test_acc
     f1_gap = train_f1 - test_f1
 
-    print(f"{model_name} 训练子集: 准确率={train_acc:.4f}, F1(macro)={train_f1:.4f}")
-    print(f"{model_name} 测试子集: 准确率={test_acc:.4f}, F1(macro)={test_f1:.4f}")
-    print(f"准确率差距 (Train - Test): {acc_gap:.4f}")
-    print(f"F1 差距 (Train - Test): {f1_gap:.4f}")
+    print(f"{model_name} Training subset: Accuracy={train_acc:.4f}, F1(macro)={train_f1:.4f}")
+    print(f"{model_name} Test subset: Accuracy={test_acc:.4f}, F1(macro)={test_f1:.4f}")
+    print(f"Accuracy gap (Train - Test): {acc_gap:.4f}")
+    print(f"F1 gap (Train - Test): {f1_gap:.4f}")
 
     overfit = False
     if acc_gap > 0.05 or f1_gap > 0.05:
-        print(f"警告：{model_name} 可能存在明显过拟合！")
+        print(f"Warning: {model_name} may have significant overfitting!")
         overfit = True
     elif acc_gap > 0.02 or f1_gap > 0.02:
-        print(f"提示：{model_name} 存在轻微过拟合")
+        print(f"Notice: {model_name} has mild overfitting")
     else:
-        print(f"{model_name} 泛化良好，无显著过拟合")
-
+        print(f"{model_name} generalizes well, no significant overfitting")
     return {
         'train_acc': train_acc,
         'test_acc': test_acc,
@@ -198,11 +204,11 @@ def assess_overfitting(model, train_loader, test_loader, device, model_name="模
         'f1_gap': f1_gap,
         'is_overfit': overfit
     }
-# ======================
-# 主程序
-# ======================
+
+
+#main
 def main():
-    # 创建统一测试 DataLoader
+    # Create a unified test DataLoader
     TEST_DATALOADER = create_imdb_test_loader(
         batch_size=BATCH_SIZE,
         max_len=MAX_LEN,
@@ -210,9 +216,9 @@ def main():
         seed=RANDOM_SEED
     )
 
-    # 创建一次训练子集 DataLoader，用于所有模型的过拟合分析
+    # Create a training subset DataLoader for overfitting analysis of all models
     print("\n" + "=" * 50)
-    print("初始化训练子集（用于过拟合分析）...")
+    print("Initializing training subset (for overfitting analysis)...")
     TRAIN_SUB_LOADER = create_imdb_train_subset_loader(
         batch_size=BATCH_SIZE,
         max_len=MAX_LEN,
@@ -224,15 +230,15 @@ def main():
     all_true_labels = []
     model_f1_macros = []
     valid_model_paths = []
-    single_model_overfit_results = []  # 存储每个单模型的过拟合指标
+    single_model_overfit_results = []  # Store the overfitting metrics for each individual model
 
-    print("\n正在评估独立模型...\n")
+    print("\nEvaluating the standalone model...\n")
     for i, model_path in enumerate(MODEL_FILES, 1):
         if not os.path.exists(model_path):
-            print(f"跳过 {model_path}：文件不存在")
+            print(f"Skipping {model_path}: file does not exist")
             continue
 
-        print(f"\n--- 模型 {i}: {model_path} ---")
+        print(f"\n--- Model {i}: {model_path} ---")
         model = get_model(num_labels=NUM_LABELS, model_name=MODEL_NAME)
         model.load_state_dict(torch.load(model_path, map_location=DEVICE))
         model.to(DEVICE)
@@ -242,17 +248,17 @@ def main():
         f1_macro = f1_score(labels, preds, average='macro')
         f1_weighted = f1_score(labels, preds, average='weighted')
 
-        print(f"准确率: {acc:.4f} | F1 (macro): {f1_macro:.4f} | F1 (weighted): {f1_weighted:.4f}")
-        print("混淆矩阵:")
+        print(f"Accuracy: {acc:.4f} | F1 (macro): {f1_macro:.4f} | F1 (weighted): {f1_weighted:.4f}")
+        print("Confusion Matrix:")
         print(cm)
 
-        # 评估该单模型的过拟合情况
+        # Assess the overfitting of this single model
         overfit_metrics = assess_overfitting(
             model,
             TRAIN_SUB_LOADER,
             TEST_DATALOADER,
             DEVICE,
-            model_name=f"模型 {i}"
+            model_name=f"Model {i}"
         )
         single_model_overfit_results.append((model_path, overfit_metrics))
 
@@ -262,11 +268,9 @@ def main():
         valid_model_paths.append(model_path)
 
     if not valid_model_paths:
-        raise RuntimeError("无有效模型用于合并")
+        raise RuntimeError("No valid model available for merging")
 
-    # ==============================
-    # 过滤低质量模型（基于 F1）
-    # ==============================
+    # Filter low-quality models (based on F1)
     filtered_paths = []
     filtered_f1s = []
     for path, f1 in zip(valid_model_paths, model_f1_macros):
@@ -274,24 +278,20 @@ def main():
             filtered_paths.append(path)
             filtered_f1s.append(f1)
         else:
-            print(f"排除低性能模型 {os.path.basename(path)} (F1={f1:.4f} < {MIN_F1_THRESHOLD})")
+            print(f"Eliminate low-performance models {os.path.basename(path)} (F1={f1:.4f} < {MIN_F1_THRESHOLD})")
 
     if not filtered_paths:
-        print("所有模型 F1 均低于阈值，回退到全部模型")
+        print("All models have an F1 score below the threshold, reverting to all models")
         filtered_paths, filtered_f1s = valid_model_paths, model_f1_macros
 
-    # ==============================
-    # 执行加权 FedAvg（基于 F1）
-    # ==============================
-    print(f"\n执行加权 FedAvg（按 F1(macro) 分配权重，阈值={MIN_F1_THRESHOLD})...")
+    # Perform weighted FedAvg (based on F1)
+    print(f"\nExecuting weighted FedAvg (assigning weights based on F1(macro), threshold={MIN_F1_THRESHOLD})...")
     merged_sd = fed_avg_weighted(filtered_paths, filtered_f1s, device="cpu")
     torch.save(merged_sd, OUTPUT_MERGED_PATH)
-    print(f"加权合并完成！已保存至: {OUTPUT_MERGED_PATH}")
+    print(f"Weighted merge completed! Saved to: {OUTPUT_MERGED_PATH}")
 
-    # ==============================
-    # 评估合并模型
-    # ==============================
-    print("\n正在评估合并后的模型...")
+    # Evaluate the merged model
+    print("\nEvaluating the merged model...")
     merged_model = get_model(num_labels=NUM_LABELS, model_name=MODEL_NAME)
     merged_model.load_state_dict(torch.load(OUTPUT_MERGED_PATH, map_location=DEVICE))
     merged_model.to(DEVICE)
@@ -301,32 +301,31 @@ def main():
     merged_f1_macro = f1_score(merged_labels, merged_preds, average='macro')
     merged_f1_weighted = f1_score(merged_labels, merged_preds, average='weighted')
 
-    print(f"\n合并模型最终结果:")
-    print(f"确率: {merged_acc:.4f} | F1 (macro): {merged_f1_macro:.4f} | F1 (weighted): {merged_f1_weighted:.4f}")
-    print("混淆矩阵:")
+    print(f"\nFinal result of the merged model:")
+    print(f"Accuracy: {merged_acc:.4f} | F1 (macro): {merged_f1_macro:.4f} | F1 (weighted): {merged_f1_weighted:.4f}")
+    print("Confusion Matrix:")
     print(merged_cm)
 
-    # 评估合并模型的过拟合
+    # Assess overfitting of the combined model
     print("\n" + "=" * 50)
     merged_overfit = assess_overfitting(
         merged_model,
         TRAIN_SUB_LOADER,
         TEST_DATALOADER,
         DEVICE,
-        model_name="合并模型"
+        model_name="Combined Model"
     )
 
-    # ==============================
-    # 对比最佳单模型 vs 合并模型
-    # ==============================
+    # Comparison of Best Single Model vs Combined Model
     best_single_f1 = max(model_f1_macros)
     best_single_acc = max(
         np.mean(np.array(p) == np.array(l))
         for p, l in zip(all_predictions, all_true_labels)
     )
 
-    print(f"\n最佳单模型: 准确率={best_single_acc:.4f}, F1(macro)={best_single_f1:.4f}")
-    print(f"合并模型:   准确率={merged_acc:.4f}, F1(macro)={merged_f1_macro:.4f}")
+
+    print(f"\nBest single model: Accuracy={best_single_acc:.4f}, F1(macro)={best_single_f1:.4f}")
+    print(f"Merged model: Accuracy={merged_acc:.4f}, F1(macro)={merged_f1_macro:.4f}")
 
 
 

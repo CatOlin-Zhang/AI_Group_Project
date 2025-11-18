@@ -38,7 +38,7 @@ def evaluate(model, dataloader, device):
     predictions, true_labels = [], []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, desc="评估"):
+        for batch in tqdm(dataloader, desc="Assessment"):
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
             labels = batch['labels'].to(device)

@@ -5,3 +5,4 @@ best_bert_model(4).bin
 best_bert_model(5).bin
 best_bert_model(6).bin
 best_bert_model(7).bin
+fedavg_merged_bert_model.bin

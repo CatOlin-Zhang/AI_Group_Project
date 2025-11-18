@@ -1,30 +1,26 @@
-# 交互式检测
 import torch
 import re
 from transformers import BertTokenizer, BertForSequenceClassification
 
-# ----------------------------
-# 配置（需与训练时一致）
-# ----------------------------
+# Set hyperparameters and choose full-training output model best_bert_model(3).bin
+# Initialize parameters consistent with training
 MODEL_NAME = 'bert-base-uncased'
-MODEL_PATH = 'best_bert_model(2).bin'
+MODEL_PATH = 'best_bert_model(3).bin'
 MAX_LENGTH = 512
+
+#Select the device to use for computation
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ----------------------------
-# 文本预处理函数（与训练一致）
-# ----------------------------
+#Text preprocessing function, processes user input. Since input is checked for non-empty values, there is no need to filter out empty values.
 def clean_text(text):
-    text = re.sub(r'<.*?>', '', text)          # 移除HTML标签
-    text = re.sub(r'http\S+', '', text)        # 移除URL
-    text = re.sub(r'@\w+', '', text)           # 移除@提及
-    text = re.sub(r'\s+', ' ', text).strip()   # 合并空格
+    text = re.sub(r'<.*?>', '', text)          # Remove HTML tags
+    text = re.sub(r'http\S+', '', text)        # Remove URL
+    text = re.sub(r'@\w+', '', text)           # Remove @mention
+    text = re.sub(r'\s+', ' ', text).strip()   # Merge spaces
     return text
 
-# ----------------------------
-# 加载模型和tokenizer
-# ----------------------------
-print("正在加载模型和tokenizer...")
+#Load the pre-trained model from disk
+print("Loading model and tokenizer...")
 tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
 model = BertForSequenceClassification.from_pretrained(
     MODEL_NAME,
@@ -35,11 +31,9 @@ model = BertForSequenceClassification.from_pretrained(
 model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 model.to(DEVICE)
 model.eval()
-print(f"模型已加载到设备：{DEVICE}")
+print(f"The model has been loaded onto the device:{DEVICE}")
 
-# ----------------------------
-# 推理函数
-# ----------------------------
+# Use functions to predict results after loading the model
 def predict_sentiment(text: str) -> str:
     cleaned = clean_text(text)
     inputs = tokenizer(
@@ -58,26 +52,23 @@ def predict_sentiment(text: str) -> str:
         logits = outputs.logits
         prediction = torch.argmax(logits, dim=1).item()
 
-    return "正面" if prediction == 1 else "负面"
+    return "Positive" if prediction == 1 else "Negtive"
 
-# ----------------------------
-# 交互式循环
-# ----------------------------
-print("\n 欢迎使用 IMDB 情感分析系统！")
-print("请输入一段英文电影评论，模型将判断其情感倾向。")
-print("输入 'quit' 退出。\n")
+#Main Loop
+print("\nWelcome to the IMDB sentiment analysis system!\n")
+print("Please enter an English movie review, and the model will determine its sentiment.")
+print("Type 'quit' to exit.\n")
 
 while True:
-    user_input = input("请输入评论: ").strip()
+    user_input = input("Please enter a comment:").strip()
     if user_input.lower() in ['quit', 'exit', 'q']:
-        print("再见！")
         break
     if not user_input:
-        print("输入不能为空，请重试。")
+        print("Input cannot be empty, please try again.")
         continue
 
     try:
         result = predict_sentiment(user_input)
-        print(f"预测结果：{result}\n")
+        print(f"Prediction result：{result}\n")
     except Exception as e:
-        print(f"推理出错：{e}\n")
+        print(f"Reasoning error：{e}\n")
