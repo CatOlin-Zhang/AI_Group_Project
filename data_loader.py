@@ -1,5 +1,6 @@
 
 #!pip install pandas numpy matplotlib seaborn nltk scikit-learn torch transformers datasets
+#pip install hf_xet
 
 import pandas as pd  # Library for data manipulation and analysis
 import re  # Library for regular expression operations
@@ -93,14 +94,27 @@ def load_and_preprocess_data():
     """
     # Load the IMDB dataset from Hugging Face Hub (contains 'train' and 'test' splits)
     dataset = load_dataset("imdb")
-    # Convert training split to pandas DataFrame for easier manipulation
-    train_df = pd.DataFrame(dataset['train'])
-    # Convert test split to pandas DataFrame
+
+    split = dataset["train"].train_test_split(test_size=0.1, seed=42)
+
+    train_dataset = split["train"]
+    val_dataset = split["test"]
+
+    train_df = pd.DataFrame(train_dataset)
+    val_df = pd.DataFrame(val_dataset)
     test_df = pd.DataFrame(dataset['test'])
+
+    # Convert training split to pandas DataFrame for easier manipulation
+    #train_df = pd.DataFrame(dataset['train'])
+    # Convert test split to pandas DataFrame
+    #test_df = pd.DataFrame(dataset['test'])
 
     # Apply clean_text function to the 'text' column and store results in 'clean_text'
     train_df['clean_text'] = train_df['text'].apply(clean_text)
+    val_df['clean_text'] = val_df['text'].apply(clean_text)
     test_df['clean_text'] = test_df['text'].apply(clean_text)
 
     # Return processed training and test dataframes
-    return train_df, test_df
+    return train_df, test_df, val_df
+
+
