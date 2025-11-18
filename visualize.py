@@ -12,13 +12,13 @@ def plot_wordclouds(positive_text, negative_text):
     plt.subplot(1, 2, 1)
     wc_pos = WordCloud(width=800, height=400, background_color='white').generate(positive_text)
     plt.imshow(wc_pos)
-    plt.title('正面评论关键词词云')
+    plt.title('Positive Review WordCloud')
     plt.axis('off')
 
     plt.subplot(1, 2, 2)
     wc_neg = WordCloud(width=800, height=400, background_color='white').generate(negative_text)
     plt.imshow(wc_neg)
-    plt.title('负面评论关键词词云')
+    plt.title('Negative Review WordCloud')
     plt.axis('off')
     plt.tight_layout()
     plt.show()
@@ -26,18 +26,18 @@ def plot_wordclouds(positive_text, negative_text):
 def plot_training_curves(train_losses, val_losses, val_accuracies):
     plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
-    plt.plot(train_losses, label='训练损失')
-    plt.plot(val_losses, label='验证损失')
-    plt.title('训练与验证损失曲线')
+    plt.plot(train_losses, label='train_losses')
+    plt.plot(val_losses, label='val_losses')
+    plt.title('train_validation_line')
     plt.xlabel('Epoch')
-    plt.ylabel('损失')
+    plt.ylabel('Loss')
     plt.legend()
 
     plt.subplot(1, 2, 2)
-    plt.plot(val_accuracies, label='验证准确率', color='g')
-    plt.title('验证准确率曲线')
+    plt.plot(val_accuracies, label='Verification_accuracy', color='g')
+    plt.title('Verification Accuracy Line')
     plt.xlabel('Epoch')
-    plt.ylabel('准确率')
+    plt.ylabel('Accuracy')
     plt.legend()
     plt.tight_layout()
     plt.show()
@@ -46,11 +46,11 @@ def plot_confusion_matrix(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=['负面', '正面'],
-                yticklabels=['负面', '正面'])
-    plt.xlabel('预测标签')
-    plt.ylabel('真实标签')
-    plt.title('测试集混淆矩阵')
+                xticklabels=['negative', 'positive'],
+                yticklabels=['negative', 'positive'])
+    plt.xlabel('pridected label')
+    plt.ylabel('true label')
+    plt.title('TestSet Confusion Matrix')
     plt.show()
 
 def print_classification_report(y_true, y_pred):
@@ -67,4 +67,29 @@ def print_error_samples(test_df, num_samples=3):
         print(f"真实标签：{real}")
         print(f"预测标签：{pred}")
         print(f"评论内容：{errors['clean_text'].iloc[i][:300]}...")
-#TODO 更多可视化选择
+def Review_Analyze(train_df , test_df):
+    # Calculate comment length (in characters)
+    train_df['length'] = train_df['text'].apply(lambda x: len(x))
+    test_df['length'] = test_df['text'].apply(lambda x: len(x))
+
+    plt.figure(figsize=(12, 5))
+    # Training set length distribution
+    plt.subplot(1, 2, 1)
+    sns.histplot(train_df['length'], kde=True, bins=50)
+    plt.axvline(train_df['length'].mean(), color='r', linestyle='--',
+                label=f"mean value:{train_df['length'].mean():.0f}")
+    plt.title('Training Set Review Length')
+    plt.xlabel('Character Count')
+    plt.legend()
+
+    # Length comparison for different sentiments
+    plt.subplot(1, 2, 2)
+    sns.boxplot(x='label', y='length', data=train_df)
+    # Logarithmic scale to reduce the impact of extreme values
+    plt.yscale('log')
+    plt.title('Comparison of Review Lengths for Different Sentiment')
+    plt.xlabel('Sentiment(0=negtive,1=positive)')
+    plt.ylabel('Character Number')
+
+    plt.tight_layout()
+    plt.show()

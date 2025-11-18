@@ -9,10 +9,8 @@ max_length = 512
 batch_size = 16
 learning_rate = 2e-5
 epsilon = 1e-8
-epochs = 3
-test_size = 0.1
+epochs = 1
+test_size = 0.99
 random_state = 42
 best_model_path = 'best_bert_model.bin'
-
-# 可视化中文字体
 matplotlib_font = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC"]

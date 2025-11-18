@@ -2,14 +2,14 @@ import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from transformers import BertTokenizer, AdamW, get_linear_schedule_with_warmup
+from transformers import BertTokenizer, get_linear_schedule_with_warmup
 from torch.optim import AdamW
 from config import *
 from data_loader import load_and_preprocess_data, simple_preprocess
 from dataset import IMDBDataset
 from model import get_model, train_epoch, evaluate
 from visualize import set_chinese_font, plot_wordclouds, plot_training_curves, \
-                     plot_confusion_matrix, print_classification_report, print_error_samples
+                     plot_confusion_matrix, print_classification_report, print_error_samples,Review_Analyze
 
 def main():
     set_chinese_font()
@@ -17,7 +17,7 @@ def main():
 
     # 加载数据
     train_df, test_df = load_and_preprocess_data()
-
+    Review_Analyze(train_df, test_df)
     # 词云分析（小样本）
     sample_size = 1000
     train_sample = train_df.sample(sample_size, random_state=random_state)
