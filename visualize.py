@@ -24,6 +24,9 @@ def set_english_font():
     plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
     sns.set(font_scale=1.2)
 
+def set_chinese_font():
+    plt.rcParams["font.family"] = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC"]
+    sns.set(font_scale=1.2)
 
 def diagnose_tokenization_issues(train_df):
     """
@@ -469,3 +472,29 @@ def run_enhanced_visualizations(train_df, val_df, test_df,
         print_error_samples(test_df_copy)
 
         return false_positives, false_negatives
+def Review_Analyze(train_df , test_df):
+    # Calculate comment length (in characters)
+    train_df['length'] = train_df['text'].apply(lambda x: len(x))
+    test_df['length'] = test_df['text'].apply(lambda x: len(x))
+
+    plt.figure(figsize=(12, 5))
+    # Training set length distribution
+    plt.subplot(1, 2, 1)
+    sns.histplot(train_df['length'], kde=True, bins=50)
+    plt.axvline(train_df['length'].mean(), color='r', linestyle='--',
+                label=f"mean value:{train_df['length'].mean():.0f}")
+    plt.title('Training Set Review Length')
+    plt.xlabel('Character Count')
+    plt.legend()
+
+    # Length comparison for different sentiments
+    plt.subplot(1, 2, 2)
+    sns.boxplot(x='label', y='length', data=train_df)
+    # Logarithmic scale to reduce the impact of extreme values
+    plt.yscale('log')
+    plt.title('Comparison of Review Lengths for Different Sentiment')
+    plt.xlabel('Sentiment(0=negtive,1=positive)')
+    plt.ylabel('Character Number')
+
+    plt.tight_layout()
+    plt.show()
