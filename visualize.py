@@ -24,9 +24,11 @@ def set_english_font():
     plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
     sns.set(font_scale=1.2)
 
+
 def set_chinese_font():
     plt.rcParams["font.family"] = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC"]
     sns.set(font_scale=1.2)
+
 
 def diagnose_tokenization_issues(train_df):
     """
@@ -44,11 +46,11 @@ def diagnose_tokenization_issues(train_df):
         # Check for HTML tags
         html_tags = re.findall(r'<[^>]+>', text)
         if html_tags:
-            print(f"⚠️ Found HTML tags: {set(html_tags)}")
+            print(f"Found HTML tags: {set(html_tags)}")
 
         # Check for "br" in text
         if 'br' in text.lower():
-            print("⚠️ Text contains 'br'")
+            print("Text contains 'br'")
 
         # Show tokenization results - with fallback mechanism
         try:
@@ -62,9 +64,9 @@ def diagnose_tokenization_issues(train_df):
                               in ['br', 'nbsp', 'amp', 'lt', 'gt', 'quot']]
             if problem_tokens:
                 print(
-                    f"❌ Tokenization contains problematic tokens: {set(problem_tokens)}")
+                    f"Tokenization contains problematic tokens: {set(problem_tokens)}")
             else:
-                print("✅ Tokenization is clean")
+                print("Tokenization is clean")
 
         except Exception as e:
             print(f"NLTK tokenization failed: {e}")
@@ -78,7 +80,7 @@ def diagnose_tokenization_issues(train_df):
                 problem in token.lower() for problem in ['br', 'nbsp', 'amp'])]
             if problem_tokens:
                 print(
-                    f"❌ Simple tokenization contains problematic tokens: {set(problem_tokens)}")
+                    f"Simple tokenization contains problematic tokens: {set(problem_tokens)}")
 
     # Count problematic word frequency - using simple tokenization to ensure it runs
     print("\n=== High Frequency Word Analysis ===")
@@ -101,11 +103,11 @@ def diagnose_tokenization_issues(train_df):
                 break
 
     if problem_words:
-        print(f"🔴 Found {len(problem_words)} types of problematic words:")
+        print(f"Found {len(problem_words)} types of problematic words:")
         for word, freq in sorted(problem_words.items(), key=lambda x: x[1], reverse=True):
             print(f"  '{word}': {freq} times")
     else:
-        print("🟢 No common problematic words found")
+        print("No common problematic words found")
 
     # Show top 20 frequent words
     print(f"\nTop 20 frequent words:")
@@ -239,15 +241,15 @@ def print_classification_report(y_true, y_pred):
 
 def analyze_error_patterns(test_df, num_samples=5):
     """Analyze error patterns in predictions"""
-    errors = test_df[test_df['label'] != test_df['pred']]
+    errors = test_df[test_df['label'] != test_df['pred']].copy()
 
     print("=== Error Analysis ===")
     print(f"Total errors: {len(errors)}")
     print(f"Error rate: {len(errors)/len(test_df):.4f}")
 
     # Error type analysis
-    false_positives = errors[errors['label'] == 0]
-    false_negatives = errors[errors['label'] == 1]
+    false_positives = errors[errors['label'] == 0].copy()
+    false_negatives = errors[errors['label'] == 1].copy()
 
     print(f"False Positives: {len(false_positives)}")
     print(f"False Negatives: {len(false_negatives)}")
@@ -282,7 +284,7 @@ def analyze_error_patterns(test_df, num_samples=5):
 
 def print_error_samples(test_df, num_samples=3):
     """Print misclassified samples"""
-    errors = test_df[test_df['label'] != test_df['pred']]
+    errors = test_df[test_df['label'] != test_df['pred']].copy()
     print("\nMisclassified Samples:")
     # Clean error sample text
     errors['cleaned_text'] = errors['text'].apply(clean_text_for_wordcloud)
@@ -472,7 +474,9 @@ def run_enhanced_visualizations(train_df, val_df, test_df,
         print_error_samples(test_df_copy)
 
         return false_positives, false_negatives
-def Review_Analyze(train_df , test_df):
+
+
+def Review_Analyze(train_df, test_df):
     # Calculate comment length (in characters)
     train_df['length'] = train_df['text'].apply(lambda x: len(x))
     test_df['length'] = test_df['text'].apply(lambda x: len(x))
