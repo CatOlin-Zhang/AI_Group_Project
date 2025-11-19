@@ -1,7 +1,6 @@
 from torch.utils.data import Dataset  # Base class for creating custom datasets in PyTorch
 from transformers import BertTokenizer  # BERT tokenizer for text preprocessing (converts text to token IDs)
 
-
 class IMDBDataset(Dataset):
     """
     A custom PyTorch Dataset class for handling IMDB movie review data.
