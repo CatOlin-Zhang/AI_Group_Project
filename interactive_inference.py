@@ -34,7 +34,7 @@ model.eval()
 print(f"The model has been loaded onto the device:{DEVICE}")
 
 # Use functions to predict results after loading the model
-def predict_sentiment(text: str) -> str:
+def predict_sentiment(text: str):
     cleaned = clean_text(text)
     inputs = tokenizer(
         cleaned,
@@ -50,17 +50,19 @@ def predict_sentiment(text: str) -> str:
     with torch.no_grad():
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
-        prediction = torch.argmax(logits, dim=1).item()
+        probabilities = torch.softmax(logits, dim=1).squeeze()  # shape: [2]
+        prediction = torch.argmax(probabilities).item()
+        confidence = probabilities[prediction].item()
 
-    return "Positive" if prediction == 1 else "Negtive"
+    label = "Positive" if prediction == 1 else "Negative"
+    return label, confidence
 
 #Main Loop
 print("\nWelcome to the IMDB sentiment analysis system!\n")
 print("Please enter an English movie review, and the model will determine its sentiment.")
 print("Type 'quit' to exit.\n")
-
 while True:
-    user_input = input("Please enter a comment:").strip()
+    user_input = input("Please enter a comment: ").strip()
     if user_input.lower() in ['quit', 'exit', 'q']:
         break
     if not user_input:
@@ -68,7 +70,7 @@ while True:
         continue
 
     try:
-        result = predict_sentiment(user_input)
-        print(f"Prediction result：{result}\n")
+        label, conf = predict_sentiment(user_input)
+        print(f"Prediction result: {label} (Confidence: {conf:.4f})\n")
     except Exception as e:
-        print(f"Reasoning error：{e}\n")
+        print(f"Inference error: {e}\n")

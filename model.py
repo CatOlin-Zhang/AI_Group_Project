@@ -53,4 +53,3 @@ def evaluate(model, dataloader, device):
     avg_loss = total_loss / len(dataloader)
     accuracy = accuracy_score(true_labels, predictions)
     return avg_loss, accuracy, predictions, true_labels
-#TODO 模型调整
