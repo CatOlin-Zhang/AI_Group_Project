@@ -9,16 +9,20 @@ from data_loader import load_and_preprocess_data, simple_preprocess
 from dataset import IMDBDataset
 from model import get_model, train_epoch, evaluate
 from visualize import set_chinese_font, plot_wordclouds, plot_training_curves, \
-                     plot_confusion_matrix, print_classification_report, print_error_samples,Review_Analyze
+                     plot_confusion_matrix, print_classification_report, print_error_samples, Review_Analyze
 
 def main():
+    # Initialize Chinese font for visualization
     set_chinese_font()
-    print(f"使用设备：{device}")
+    print(f"Using device: {device}")
 
-    # 加载数据
+    # Load and preprocess data
     train_df, test_df = load_and_preprocess_data()
+    
+    # Perform exploratory data analysis
     Review_Analyze(train_df, test_df)
-    # 词云分析（小样本）
+    
+    # Generate word clouds for positive and negative reviews
     sample_size = 1000
     train_sample = train_df.sample(sample_size, random_state=random_state)
     train_sample['clean_for_wc'] = train_sample['text'].apply(simple_preprocess)
@@ -26,10 +30,10 @@ def main():
     neg_text = ' '.join(train_sample[train_sample['label']==0]['clean_for_wc'])
     plot_wordclouds(pos_text, neg_text)
 
-    # Tokenizer
+    # Initialize BERT tokenizer
     tokenizer = BertTokenizer.from_pretrained(model_name)
 
-    # 划分训练/验证集
+    # Split training data into train/validation sets
     train_texts, val_texts, train_labels, val_labels = train_test_split(
         train_df['clean_text'].tolist(),
         train_df['label'].tolist(),
@@ -38,7 +42,7 @@ def main():
         stratify=train_df['label'].tolist()
     )
 
-    # 创建 Dataset 和 DataLoader
+    # Create datasets and data loaders
     train_dataset = IMDBDataset(train_texts, train_labels, tokenizer, max_length)
     val_dataset = IMDBDataset(val_texts, val_labels, tokenizer, max_length)
     test_dataset = IMDBDataset(test_df['clean_text'].tolist(), test_df['label'].tolist(), tokenizer, max_length)
@@ -47,13 +51,13 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    # 模型、优化器、调度器
+    # Initialize model, optimizer, and scheduler
     model = get_model().to(device)
     optimizer = AdamW(model.parameters(), lr=learning_rate, eps=epsilon)
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
-    # 训练循环
+    # Training loop
     best_val_accuracy = 0
     train_losses, val_losses, val_accuracies = [], [], []
 
@@ -61,32 +65,36 @@ def main():
         print(f"\nEpoch {epoch + 1}/{epochs}")
         print("-" * 10)
 
+        # Train for one epoch
         train_loss = train_epoch(model, train_loader, optimizer, scheduler, device)
         train_losses.append(train_loss)
-        print(f"训练损失：{train_loss:.4f}")
+        print(f"Training Loss: {train_loss:.4f}")
 
+        # Evaluate on validation set
         val_loss, val_acc, _, _ = evaluate(model, val_loader, device)
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
-        print(f"验证损失：{val_loss:.4f}，验证准确率：{val_acc:.4f}")
+        print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
 
+        # Save best model
         if val_acc > best_val_accuracy:
             best_val_accuracy = val_acc
             torch.save(model.state_dict(), best_model_path)
-            print("保存最佳模型")
+            print("Saved best model")
 
-    # 绘制训练曲线
+    # Plot training history
     plot_training_curves(train_losses, val_losses, val_accuracies)
 
-    # 测试评估
+    # Load best model and evaluate on test set
     model.load_state_dict(torch.load(best_model_path))
     test_loss, test_acc, test_preds, test_labels = evaluate(model, test_loader, device)
-    print(f"\n测试集结果：损失={test_loss:.4f}, 准确率={test_acc:.4f}")
+    print(f"\nTest Results: Loss={test_loss:.4f}, Accuracy={test_acc:.4f}")
 
+    # Generate performance reports and visualizations
     print_classification_report(test_labels, test_preds)
     plot_confusion_matrix(test_labels, test_preds)
 
-    # 错误样本分析
+    # Analyze misclassified samples
     test_df_reset = test_df.reset_index(drop=True)
     test_df_reset['pred'] = test_preds
     print_error_samples(test_df_reset)
