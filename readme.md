@@ -76,9 +76,10 @@ Results from the model fusion
 
 ---
 ## References and Third-Party Libraries
-    Fed_Avg:    McMahan, H. B., Moore, E., Ramage, D., Hampson, S., & y Arcas, B. A. (2017). Communication-Efficient Learning of Deep Networks from Decentralized Data. AISTATS.
-    matplotlib 
-    seaborn
-    nltk
-    wordcloud
-    PyTorch/TensorFlow
+1. **References**
+    
+   McMahan, H. B., Moore, E., Ramage, D., Hampson, S., & y Arcas, B. A. (2017). Communication-Efficient Learning of Deep Networks from Decentralized Data. AISTATS.
+
+2. **Third-Party Libraries**
+    
+    pandas;re;matplotlib;seaborn;nltk;wordcloud;PyTorch;TensorFlow
