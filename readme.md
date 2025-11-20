@@ -36,7 +36,7 @@ Make sure the GPU driver and CUDA version are displayed correctly.
 - Install other dependencies such as scikit-learn and numpy according to PyCharm's prompts
 
 ---
-## 项目结构
+## Project structure
 
 1. **Main Files**
 
