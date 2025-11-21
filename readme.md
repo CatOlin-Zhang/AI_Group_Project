@@ -41,6 +41,10 @@ Make sure the GPU driver and CUDA version are displayed correctly.
 1. **Main Files**
 
         project/
+        ├── NoteBook---
+        │ ├── IMDB_groupwork            # Notebook version of group work.
+        │ ├── test.csv                  # Data for test of the NoteBook
+        │ └── train.csv                 # Data for train of the NoteBook
         ├── Tips---
         │ ├── bin_check/                # Model framework compatibility check scripts
         │ ├── log.py                    # Development logging module
